@@ -4,23 +4,20 @@ import pandas as pd
 import streamlit as st
 
 # -------------------------------
-# Path Configuration
+# Page Config
+# -------------------------------
+st.set_page_config(page_title="Used Car Price Predictor", page_icon="🚗")
+
+# -------------------------------
+# Paths
 # -------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(BASE_DIR, "car_price_prediction_model.pkl")
 features_path = os.path.join(BASE_DIR, "model_features.pkl")
 
 # -------------------------------
-# Load Model
+# Load Model + Features
 # -------------------------------
-if not os.path.exists(model_path):
-    st.error(f"❌ Model file not found at: `{model_path}`\n\nPlease place `car_price_prediction_model.pkl` in: `{BASE_DIR}`")
-    st.stop()
-
-if not os.path.exists(features_path):
-    st.error(f"❌ Features file not found at: `{features_path}`\n\nPlease place `model_features.pkl` in: `{BASE_DIR}`")
-    st.stop()
-
 try:
     with open(model_path, "rb") as f:
         model = pickle.load(f)
@@ -29,57 +26,66 @@ try:
         model_features = pickle.load(f)
 
 except Exception as e:
-    st.error(f"❌ Failed to load model files. Error: {e}")
+    st.error(f"❌ Error loading model/files: {e}")
     st.stop()
 
 # -------------------------------
 # UI
 # -------------------------------
-st.set_page_config(page_title="Used Car Price Predictor", page_icon="🚗")
-
 st.title("🚗 Used Car Price Prediction App")
-st.write("Enter the car details below to estimate its price.")
+st.write("Fill the details below to estimate the car price 💰")
 
-# -------------------------------
-# Inputs
-# -------------------------------
+# Inputs (MATCH TRAINING DATA EXACTLY)
 year = st.number_input("Year of Manufacture", min_value=1990, max_value=2025, value=2015)
-mileage = st.number_input("Mileage (in kilometers)", min_value=0, step=1000)
-fuel_type = st.selectbox("Fuel Type", ['Petrol', 'Diesel', 'Electric'])
-accident = st.selectbox("Accident History", ['Yes', 'No'])
-clean_title = st.selectbox("Clean Title", ['Yes', 'No'])
+
+mileage = st.number_input("Kilometers Driven", min_value=0, step=1000)
+
+fuel_type = st.selectbox(
+    "Fuel Type",
+    ['Petrol', 'Diesel', 'Electric']
+)
+
+accident = st.selectbox(
+    "Accident History",
+    ['None reported', 'At least 1 accident or damage reported']
+)
+
+clean_title = st.selectbox(
+    "Clean Title",
+    ['Yes', 'No']
+)
 
 # -------------------------------
 # Prepare Input Data
 # -------------------------------
-input_data = {
-    'year': year,
-    'kilometers_driven': mileage,
-}
-df_input = pd.DataFrame([input_data])
+# Create empty dataframe with ALL features
+df_input = pd.DataFrame(columns=model_features)
+df_input.loc[0] = 0
 
-# One-hot encoding manually
-categorical_inputs = {
-    'fuel_type': fuel_type,
-    'accident': accident,
-    'clean_title': clean_title
-}
+# Fill numeric
+df_input['year'] = year
+df_input['kilometers_driven'] = mileage
 
-for col in model_features:
-    if "_" in col:
-        feature, value = col.split("_", 1)
-        if feature in categorical_inputs and categorical_inputs[feature] == value:
-            df_input[col] = 1
-        else:
-            df_input[col] = 0
+# Encode categorical (IMPORTANT)
+fuel_col = f"fuel_type_{fuel_type}"
+if fuel_col in df_input.columns:
+    df_input[fuel_col] = 1
 
-# Add any missing columns
-for col in model_features:
-    if col not in df_input.columns:
-        df_input[col] = 0
+accident_col = f"accident_{accident}"
+if accident_col in df_input.columns:
+    df_input[accident_col] = 1
+
+clean_col = f"clean_title_{clean_title}"
+if clean_col in df_input.columns:
+    df_input[clean_col] = 1
 
 # Ensure correct column order
 df_input = df_input[model_features]
+
+# -------------------------------
+# Debug (optional)
+# -------------------------------
+# st.write("Model Input:", df_input)
 
 # -------------------------------
 # Prediction
@@ -89,4 +95,4 @@ if st.button("Predict Price"):
         prediction = model.predict(df_input)[0]
         st.success(f"💰 Estimated Price: ₹ {int(prediction):,}")
     except Exception as e:
-        st.error(f"Prediction error: {e}")
+        st.error(f"❌ Prediction Error: {e}")
