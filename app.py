@@ -1,4 +1,3 @@
-```python
 import os
 import pickle
 import pandas as pd
@@ -140,4 +139,3 @@ if st.button("Predict Price"):
 # Debug (optional)
 # -------------------------------
 # st.write("Model Input:", df_input)
-```
