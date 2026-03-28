@@ -1,3 +1,4 @@
+```python
 import os
 import pickle
 import pandas as pd
@@ -30,14 +31,19 @@ except Exception as e:
     st.stop()
 
 # -------------------------------
+# Extract Model Names Automatically
+# -------------------------------
+model_list = [
+    col.replace("model_", "")
+    for col in model_features
+    if col.startswith("model_")
+]
+
+# -------------------------------
 # UI
 # -------------------------------
 st.title("🚗 Used Car Price Prediction App")
 st.write("Fill the details below to estimate the car price 💰")
-
-# -------------------------------
-# Inputs
-# -------------------------------
 
 year = st.number_input(
     "Year of Manufacture",
@@ -54,55 +60,60 @@ mileage = st.number_input(
 
 fuel_type = st.selectbox(
     "Fuel Type",
-    ['Petrol', 'Diesel', 'Electric']
+    [
+        "Diesel",
+        "E85 Flex Fuel",
+        "Gasoline",
+        "Hybrid",
+        "Plug-In Hybrid",
+        "not supported",
+        "–"
+    ]
 )
 
-# Car model input
 model_name = st.selectbox(
     "Car Model",
-    [
-        "Honda City",
-        "Hyundai i20",
-        "Maruti Swift",
-        "Toyota Innova",
-        "Hyundai Creta",
-        "Tata Nexon"
-    ]
+    model_list
 )
 
 accident = st.selectbox(
     "Accident History",
-    ['None reported', 'At least 1 accident or damage reported']
+    [
+        "None reported",
+        "At least 1 accident or damage reported"
+    ]
 )
 
 clean_title = st.selectbox(
     "Clean Title",
-    ['Yes', 'No']
+    [
+        "Yes"
+    ]
 )
 
 # -------------------------------
 # Prepare Input Data
 # -------------------------------
-
-# Create empty dataframe with all model features
 df_input = pd.DataFrame(columns=model_features)
 df_input.loc[0] = 0
 
-# Fill numeric values
+# Numeric
 df_input['year'] = year
 df_input['kilometers_driven'] = mileage
 
-# Encode fuel type
+# Encode fuel
 fuel_col = f"fuel_type_{fuel_type}"
 if fuel_col in df_input.columns:
     df_input[fuel_col] = 1
 
-# Encode car model
+# Encode model
 model_col = f"model_{model_name}"
 if model_col in df_input.columns:
     df_input[model_col] = 1
+else:
+    df_input["model_Other"] = 1
 
-# Encode accident history
+# Encode accident
 accident_col = f"accident_{accident}"
 if accident_col in df_input.columns:
     df_input[accident_col] = 1
@@ -118,7 +129,6 @@ df_input = df_input[model_features]
 # -------------------------------
 # Prediction
 # -------------------------------
-
 if st.button("Predict Price"):
     try:
         prediction = model.predict(df_input)[0]
@@ -127,6 +137,7 @@ if st.button("Predict Price"):
         st.error(f"❌ Prediction Error: {e}")
 
 # -------------------------------
-# Optional Debug
+# Debug (optional)
 # -------------------------------
 # st.write("Model Input:", df_input)
+```
